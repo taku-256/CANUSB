@@ -50,29 +50,28 @@ class can_communication(Node) :
             self.get_logger().error(str(e))
             self.setup_serial()
 
-    def receive_data(self) :
-        rx = []
+    def rxloop(self) :
         try :
-            while True :
-                if (reading := self.ser.read()) != b'' :
-                    rx += [reading]
-                    # self.get_logger().info('RX: ' + str(reading))
-                if len(rx) >= 6 and (int(rx[1]) or len(rx) == 6 + int(rx[5])) :
-                    return b''.join(rx)
+            if self.ser.in_waiting > 0 :
+                if (head := self.ser.read()) == b'' :
+                    return
+                rx_list = [head]
+                while True :
+                    rx_list += [self.ser.read()]
+                    if len(rx_list) >= 6 and (int(rx_list[1]) or len(rx_list) == 6 + int(rx_list[5])) :
+                        rx = b''.join(rx_list)
+                        if rx[2:4] == b'7f' :
+                            # self.get_logger().error('unchi')
+                            return
+                        self.get_logger().info('rx_raw: ' + str([*rx]))
+                        self.publish_can_msg(rx)
+                        return
         except ValueError as e :
-            self.get_logger().warn('RX Value Error: ' + str(rx))
+            self.get_logger().warn('RX Value Error: ' + str(rx_list))
         except Exception as e :
-            self.get_logger().error('RX Error: ' + str(rx))
+            self.get_logger().error('RX Error: ' + str(rx_list))
             self.get_logger().error(str(e))
             self.setup_serial()
-
-    def rxloop(self) :
-        if rx := self.receive_data() :
-            if rx[2:4] == b'7f' :
-                # self.get_logger().error('unchi')
-                return
-            # self.get_logger().info('rx_raw: ' + str([*rx]))
-            self.publish_can_msg(rx)
     
     def publish_can_msg(self, rx) :
         try :
@@ -89,7 +88,7 @@ class can_communication(Node) :
             self.get_logger().error(str(e))
     
     def can_msg_callback(self, msg) :
-        # self.get_logger().info('sub: ' + str(msg))
+        self.get_logger().info('sub: ' + str(msg))
         try :
             tx = str(int(msg.channel)).encode() + str(int(msg.frametype)).encode() + format(msg.id, '03x').encode() + str(int(msg.dlc)).encode() + b''.join(msg.data)
             self.transmit_data(tx)
