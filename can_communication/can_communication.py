@@ -63,7 +63,7 @@ class can_communication(Node) :
                         if rx[2:4] == b'7f' :
                             # self.get_logger().error('unchi')
                             return
-                        self.get_logger().info('rx_raw: ' + str([*rx]))
+                        # self.get_logger().info('rx_raw: ' + str([*rx]))
                         self.publish_can_msg(rx)
                         return
         except ValueError as e :
@@ -88,7 +88,7 @@ class can_communication(Node) :
             self.get_logger().error(str(e))
     
     def can_msg_callback(self, msg) :
-        self.get_logger().info('sub: ' + str(msg))
+        # self.get_logger().info('sub: ' + str(msg))
         try :
             tx = str(int(msg.channel)).encode() + str(int(msg.frametype)).encode() + format(msg.id, '03x').encode() + str(int(msg.dlc)).encode() + b''.join(msg.data)
             self.transmit_data(tx)
